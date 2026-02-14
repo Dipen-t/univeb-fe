@@ -1,24 +1,20 @@
-import { useEffect, useRef } from 'react';
-import { useStore } from '@/store/useStore';
+import { useEffect, useRef } from "react";
+import { useStore } from "@/store/useStore";
 
 export function useWebSocket() {
   const socket = useRef<WebSocket | null>(null);
-  const { setSong, setIsPlaying } = useStore();
+  const { setSong, setIsPlaying, addToQueue, removeFromQueue } = useStore();
 
   useEffect(() => {
     // 1. DYNAMIC URL LOGIC
-    // If we are on Vercel, we need wss:// (Secure).
-    // If we are on Localhost, we use ws:// (Insecure).
+    let backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "localhost:8080";
     
-    // Get the domain from env, or default to localhost
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'localhost:8080';
-    
-    // If the URL contains "localhost", use "ws", otherwise use "wss"
-    const protocol = backendUrl.includes('localhost') ? 'ws' : 'wss';
-    
-    // Construct the full URL
+    // SAFETY FIX: Remove http:// or https:// if it exists to avoid double protocol
+    backendUrl = backendUrl.replace(/^https?:\/\//, '');
+
+    const protocol = backendUrl.includes("localhost") ? "ws" : "wss";
     const wsUrl = `${protocol}://${backendUrl}/ws?room=demo_room`;
-    
+
     console.log(`🔌 Connecting to: ${wsUrl}`);
 
     // 2. CONNECT
@@ -31,24 +27,51 @@ export function useWebSocket() {
         console.log("📩 Received:", msg);
 
         switch (msg.type) {
-          case 'SEARCH_RESULT':
-            const track = msg.data;
+          // CASE 1: Play Immediately
+          case "PLAY_NOW":
+            const song = msg.data;
+            console.log("▶ Playing Now:", song.Title);
+
+            // Set as current song
             setSong({
-              title: track.title,
-              artist: track.artist,
-              youtubeId: track.youtube_id,
-              spotifyId: track.spotify_id,
-              coverUrl: `https://img.youtube.com/vi/${track.youtube_id}/hqdefault.jpg`
+              title: song.Title,
+              artist: song.Artist,
+              youtubeId: song.YoutubeID,
+              spotifyId: "none",
+              coverUrl: song.CoverURL,
+            });
+            setIsPlaying(true);
+            
+            // OPTIONAL: If this song was in the queue, remove it.
+            // For now, we assume the backend handles order, so we just shift the top.
+            removeFromQueue(); 
+            break;
+
+          // CASE 2: Add to Queue
+          case "QUEUE_ADDED":
+            const queuedSong = msg.data;
+            console.log("📝 Added to Queue:", queuedSong.Title);
+
+            // Update the UI Store
+            addToQueue({
+              title: queuedSong.Title,
+              artist: queuedSong.Artist,
+              youtubeId: queuedSong.YoutubeID,
+              coverUrl: queuedSong.CoverURL,
             });
             break;
 
-          case 'PLAY':
+          case "PLAY":
             setIsPlaying(true);
             break;
 
-          case 'PAUSE':
+          case "PAUSE":
             setIsPlaying(false);
             break;
+            
+          case "QUEUE_EMPTY":
+             console.log("📭 The party is over (Queue empty).");
+             break;
         }
       } catch (e) {
         console.error("WS Error:", e);
@@ -58,7 +81,7 @@ export function useWebSocket() {
     return () => {
       socket.current?.close();
     };
-  }, [setSong, setIsPlaying]); // Add dependencies to keep React happy
+  }, [setSong, setIsPlaying, addToQueue, removeFromQueue]); 
 
   // 4. HELPER TO SEND MESSAGES
   const sendMessage = (type: string, data: any) => {
@@ -70,4 +93,4 @@ export function useWebSocket() {
   };
 
   return { sendMessage };
-}
+} 

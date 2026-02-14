@@ -1,34 +1,42 @@
 import { create } from 'zustand';
 
-// Define the shape of a Song
 interface Song {
   title: string;
   artist: string;
   youtubeId: string;
-  spotifyId: string;
+  spotifyId?: string;
   coverUrl?: string;
 }
 
-// Define the Global State
-interface AppState {
-  roomID: string;
+interface StoreState {
   currentSong: Song | null;
+  queue: Song[];
   isPlaying: boolean;
-  role: 'HOST' | 'GUEST';
   
-  // Actions
-  setRoomID: (id: string) => void;
   setSong: (song: Song) => void;
+  addToQueue: (song: Song) => void;
+  setQueue: (songs: Song[]) => void; // <--- MUST BE HERE
+  removeFromQueue: () => void;
   setIsPlaying: (playing: boolean) => void;
 }
 
-export const useStore = create<AppState>((set) => ({
-  roomID: 'demo_room', // Default for now
+export const useStore = create<StoreState>((set) => ({
   currentSong: null,
+  queue: [],
   isPlaying: false,
-  role: 'HOST', // We assume everyone is a Host for the MVP
 
-  setRoomID: (id) => set({ roomID: id }),
-  setSong: (song) => set({ currentSong: song }),
+  setSong: (song) => set({ currentSong: song, isPlaying: true }),
+  
+  addToQueue: (song) => set((state) => ({ 
+    queue: [...state.queue, song] 
+  })),
+
+  // <--- THIS FUNCTION IS REQUIRED FOR REFRESH TO WORK
+  setQueue: (songs) => set({ queue: songs }),
+
+  removeFromQueue: () => set((state) => ({
+    queue: state.queue.slice(1) 
+  })),
+
   setIsPlaying: (playing) => set({ isPlaying: playing }),
 }));

@@ -3,92 +3,129 @@
 import { useStore } from '@/store/useStore';
 import { Play, Pause, SkipForward, SkipBack } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useWebSocket } from '@/hooks/useWebSocket';
+import { useWebSocket } from "@/context/WebSocketContext";
+
 export default function Player() {
-  const { currentSong, isPlaying, setIsPlaying } = useStore();
-    const { sendMessage } = useWebSocket();
-  // 1. The "Empty State" (When no song is loaded)
+  const { currentSong, isPlaying } = useStore();
+  const { sendMessage } = useWebSocket();
+
+  // --- HANDLERS ---
+  const handlePlayPause = () => {
+    const action = isPlaying ? "PAUSE" : "PLAY";
+    sendMessage(action, null);
+  };
+
+  const handleSkip = () => {
+    console.log("⏭️ Skipping song...");
+    sendMessage("NEXT_SONG", null);
+  };
+
+  const handlePrevious = () => {
+    console.log("⏮️ Requesting Previous Song...");
+    sendMessage("PREV_SONG", null);
+  };
+
+  // --- RENDER ---
+  // 1. The "Empty State"
   if (!currentSong) {
     return (
-      <div className="flex flex-col items-center justify-center h-full space-y-6 text-center">
-        <div className="w-64 h-64 bg-zinc-800 rounded-2xl flex items-center justify-center shadow-2xl animate-pulse">
-          <span className="text-zinc-500 text-6xl">🎵</span>
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">No Music Playing</h2>
-          <p className="text-zinc-400">Search for a song to start the vibe.</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-full px-4 sm:px-6 py-8 sm:py-12 text-center">
+        <div className="text-5xl sm:text-6xl mb-4 sm:mb-6">🎵</div>
+        <h2 className="text-lg sm:text-xl font-bold text-white mb-2">No Music Playing</h2>
+        <p className="text-xs sm:text-sm text-zinc-500 max-w-xs">
+          Search for a song to start the session.
+        </p>
       </div>
     );
   }
 
-  // 2. The "Active State" (Music is ready)
+  // 2. The "Active State"
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full max-w-md mx-auto px-6 space-y-8">
-      
+    <div className="flex flex-col h-full px-4 sm:px-6 py-4 sm:py-6">
       {/* --- ALBUM ARTWORK --- */}
-      <div className="relative w-full aspect-square">
-        {/* The Glow Effect */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500 to-cyan-500 blur-3xl opacity-20 rounded-full animate-pulse" />
-        
-        {/* The Image */}
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
+      <div className="flex-1 flex items-center justify-center mb-4 sm:mb-6">
+        <motion.div
+          key={currentSong.youtubeId || currentSong.spotifyId}
+          initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-white/10"
+          className="relative w-full max-w-[280px] sm:max-w-xs md:max-w-sm aspect-square"
         >
-          <img 
-            src={currentSong.coverUrl || "https://i.scdn.co/image/ab67616d0000b2734ae1c4c5c45aabe565499163"} 
-            alt="Album Art"
-            className="w-full h-full object-cover"
+          <img
+            src={currentSong.coverUrl}
+            alt={currentSong.title}
+            className="w-full h-full object-cover rounded-2xl sm:rounded-3xl shadow-2xl"
           />
+          {isPlaying && (
+            <motion.div
+              className="absolute inset-0 rounded-2xl sm:rounded-3xl border-4 border-emerald-500/50"
+              animate={{ scale: [1, 1.02, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            />
+          )}
         </motion.div>
       </div>
 
       {/* --- SONG INFO --- */}
-      <div className="text-center space-y-1">
-        <h1 className="text-3xl font-bold text-white tracking-tight truncate">
+      <div className="text-center mb-4 sm:mb-6 px-2">
+        <motion.h2
+          key={currentSong.title}
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2 truncate"
+        >
           {currentSong.title}
-        </h1>
-        <p className="text-lg text-zinc-400 font-medium truncate">
+        </motion.h2>
+        <motion.p
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="text-sm sm:text-base text-zinc-400 truncate"
+        >
           {currentSong.artist}
-        </p>
+        </motion.p>
       </div>
 
       {/* --- CONTROLS --- */}
-      <div className="flex items-center justify-center space-x-8">
-        <button className="text-zinc-400 hover:text-white transition">
-          <SkipBack size={32} />
+      <div className="flex items-center justify-center gap-3 sm:gap-6 mb-4 sm:mb-6">
+        {/* PREVIOUS BUTTON */}
+        <button
+          onClick={handlePrevious}
+          className="p-3 sm:p-4 text-white hover:text-emerald-400 transition-all hover:scale-110 active:scale-95"
+          aria-label="Previous song"
+        >
+          <SkipBack size={24} className="sm:w-7 sm:h-7" />
         </button>
 
-        {/* The Big Play Button */}
-        <button 
-          onClick={() => {
-            // If playing, send PAUSE. If paused, send PLAY.
-            const action = isPlaying ? "PAUSE" : "PLAY";
-            sendMessage(action, null); 
-            // Note: We don't setIsPlaying() here manually. 
-            // We wait for the server to echo the command back.
-          }}
-          className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-black hover:scale-105 active:scale-95 transition shadow-lg shadow-white/10"
+        {/* PLAY/PAUSE */}
+        <motion.button
+          onClick={handlePlayPause}
+          whileTap={{ scale: 0.95 }}
+          className="p-4 sm:p-5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-full shadow-lg hover:shadow-emerald-500/50 transition-all"
+          aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
-            <Pause size={36} fill="currentColor" />
+            <Pause size={28} className="sm:w-8 sm:h-8 fill-white" />
           ) : (
-            <Play size={36} fill="currentColor" className="ml-1" />
+            <Play size={28} className="sm:w-8 sm:h-8 fill-white ml-1" />
           )}
-        </button>
+        </motion.button>
 
-        <button className="text-zinc-400 hover:text-white transition">
-          <SkipForward size={32} />
+        {/* SKIP BUTTON */}
+        <button
+          onClick={handleSkip}
+          className="p-3 sm:p-4 text-white hover:text-emerald-400 transition-all hover:scale-110 active:scale-95"
+          aria-label="Skip song"
+        >
+          <SkipForward size={24} className="sm:w-7 sm:h-7" />
         </button>
       </div>
-      
-      {/* Source Badge (Hidden Trick) */}
-      <div className="px-3 py-1 bg-zinc-800 rounded-full text-xs font-mono text-zinc-500">
-        Playing via {currentSong.youtubeId ? 'YouTube Audio' : 'Spotify'}
-      </div>
 
+      {/* Source Badge */}
+      <div className="flex justify-center">
+        <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-zinc-800/50 rounded-full text-[10px] sm:text-xs text-zinc-400 font-medium">
+          {currentSong.youtubeId ? 'YouTube Audio' : 'Spotify'}
+        </span>
+      </div>
     </div>
   );
 }
