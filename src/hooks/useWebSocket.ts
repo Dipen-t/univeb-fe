@@ -34,6 +34,7 @@ export function useWebSocket() {
 
             // Set as current song
             setSong({
+              queueId: song.QueueID || song.queue_id || 'now-playing',
               title: song.Title,
               artist: song.Artist,
               youtubeId: song.YoutubeID,
@@ -54,6 +55,7 @@ export function useWebSocket() {
 
             // Update the UI Store
             addToQueue({
+              queueId: queuedSong.QueueID || queuedSong.queue_id,
               title: queuedSong.Title,
               artist: queuedSong.Artist,
               youtubeId: queuedSong.YoutubeID,

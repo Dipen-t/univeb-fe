@@ -12,6 +12,7 @@ export function useSocketLogic() {
       case "PLAY_NOW":
         if (msg.data && (msg.data.Title || msg.data.title)) {
           setSong({
+            queueId: msg.data.QueueID || msg.data.queue_id || 'now-playing',
             title: msg.data.Title || msg.data.title,
             artist: msg.data.Artist || msg.data.artist,
             youtubeId: msg.data.YoutubeID || msg.data.youtube_id,
@@ -49,10 +50,12 @@ export function useSocketLogic() {
         // 1. Sync Current Song
         if (state.current_song) {
           setSong({
+            queueId: state.current_song.QueueID || state.current_song.queue_id || 'now-playing',
             title: state.current_song.title,
             artist: state.current_song.artist,
             youtubeId: state.current_song.youtube_id,
             coverUrl: state.current_song.cover_url,
+            status: state.current_song.Status || state.current_song.status || 'waiting'
           });
           setIsPlaying(true);
         }

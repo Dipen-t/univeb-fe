@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 
 interface Song {
+  queueId: number | string;
   title: string;
   artist: string;
   youtubeId: string;
   spotifyId?: string;
   coverUrl?: string;
+  status?: 'playing' | 'waiting' | 'played';
 }
 
 interface StoreState {
