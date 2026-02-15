@@ -50,7 +50,7 @@ export default function LandingPage() {
             <Music size={40} className="text-black" strokeWidth={2.5} />
           </div>
           <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-white to-zinc-500 bg-clip-text text-transparent">
-            Univibe
+            UnIvibe
           </h1>
           <p className="text-zinc-500">Listen together. In sync.</p>
         </div>
